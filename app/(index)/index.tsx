@@ -1,87 +1,149 @@
-import React from "react";
-import { Stack, router } from "expo-router";
-import { FlatList, Pressable, StyleSheet, View, Text } from "react-native";
-// Components
-import { IconCircle } from "@/components/IconCircle";
-import { IconSymbol } from "@/components/IconSymbol";
-import { BodyScrollView } from "@/components/BodyScrollView";
-import { Button } from "@/components/button";
-// Constants & Hooks
-import { backgroundColors } from "@/constants/Colors";
 
-const ICON_COLOR = "#007AFF";
+import React, { useState, useEffect } from "react";
+import { Stack, router } from "expo-router";
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Pressable, 
+  TextInput, 
+  ScrollView,
+  Alert,
+  Dimensions 
+} from "react-native";
+import { IconSymbol } from "@/components/IconSymbol";
+import { Button } from "@/components/button";
+import { jamaicaColors } from "@/constants/Colors";
+import { commonStyles, colors } from "@/styles/commonStyles";
+import * as Location from 'expo-location';
+
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const [pickupLocation, setPickupLocation] = useState("");
+  const [destination, setDestination] = useState("");
+  const [selectedRideType, setSelectedRideType] = useState("standard");
+  const [estimatedFare, setEstimatedFare] = useState(0);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isRequestingRide, setIsRequestingRide] = useState(false);
 
-  const modalDemos = [
+  const rideTypes = [
     {
-      title: "Standard Modal",
-      description: "Full screen modal presentation",
-      route: "/modal",
-      color: "#007AFF",
+      id: "standard",
+      name: "JamRide",
+      description: "Affordable rides",
+      price: "J$800",
+      icon: "car",
+      multiplier: 1.0
     },
     {
-      title: "Form Sheet",
-      description: "Bottom sheet with detents and grabber",
-      route: "/formsheet",
-      color: "#34C759",
+      id: "premium",
+      name: "JamLux",
+      description: "Premium comfort",
+      price: "J$1200",
+      icon: "car.fill",
+      multiplier: 1.5
     },
     {
-      title: "Transparent Modal",
-      description: "Overlay without obscuring background",
-      route: "/transparent-modal",
-      color: "#FF9500",
+      id: "shared",
+      name: "JamShare",
+      description: "Share & save",
+      price: "J$600",
+      icon: "person.2",
+      multiplier: 0.75
     }
   ];
 
-  const renderModalDemo = ({ item }: { item: typeof modalDemos[0] }) => (
-    <View style={styles.demoCard}>
-      <View style={[styles.demoIcon, { backgroundColor: item.color }]}>
-        <IconSymbol name="square.grid.3x3" color="white" size={24} />
-      </View>
-      <View style={styles.demoContent}>
-        <Text style={styles.demoTitle}>{item.title}</Text>
-        <Text style={styles.demoDescription}>{item.description}</Text>
-      </View>
-      <Button
-        variant="outline"
-        size="sm"
-        onPress={() => router.push(item.route as any)}
-      >
-        Try It
-      </Button>
-    </View>
-  );
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
 
-  const renderEmptyList = () => (
-    <BodyScrollView contentContainerStyle={styles.emptyStateContainer}>
-      <IconCircle
-        emoji=""
-        backgroundColor={
-          backgroundColors[Math.floor(Math.random() * backgroundColors.length)]
-        }
-      />
-    </BodyScrollView>
-  );
+  const getCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required to use this app');
+        return;
+      }
 
-  const renderHeaderRight = () => (
+      let location = await Location.getCurrentPositionAsync({});
+      setUserLocation(location);
+      console.log('User location:', location);
+    } catch (error) {
+      console.log('Error getting location:', error);
+    }
+  };
+
+  const calculateFare = () => {
+    if (pickupLocation && destination) {
+      const baseRate = 800; // Base rate in JMD
+      const selectedType = rideTypes.find(type => type.id === selectedRideType);
+      const fare = Math.round(baseRate * (selectedType?.multiplier || 1.0));
+      setEstimatedFare(fare);
+    }
+  };
+
+  useEffect(() => {
+    calculateFare();
+  }, [pickupLocation, destination, selectedRideType]);
+
+  const handleRequestRide = () => {
+    if (!pickupLocation || !destination) {
+      Alert.alert('Missing Information', 'Please enter both pickup and destination locations');
+      return;
+    }
+
+    setIsRequestingRide(true);
+    
+    // Simulate ride request
+    setTimeout(() => {
+      setIsRequestingRide(false);
+      Alert.alert(
+        'Ride Requested!', 
+        `Your ${rideTypes.find(t => t.id === selectedRideType)?.name} is on the way!\nEstimated fare: J$${estimatedFare}`,
+        [
+          { text: 'Track Ride', onPress: () => router.push('/ride-tracking') }
+        ]
+      );
+    }, 2000);
+  };
+
+  const renderRideType = (rideType: typeof rideTypes[0]) => (
     <Pressable
-      onPress={() => {console.log("plus")}}
-      style={styles.headerButtonContainer}
+      key={rideType.id}
+      style={[
+        styles.rideTypeCard,
+        selectedRideType === rideType.id && styles.selectedRideType
+      ]}
+      onPress={() => setSelectedRideType(rideType.id)}
     >
-      <IconSymbol name="plus" color={ICON_COLOR} />
-    </Pressable>
-  );
-
-  const renderHeaderLeft = () => (
-    <Pressable
-      onPress={() => {console.log("gear")}}
-      style={styles.headerButtonContainer}
-    >
-      <IconSymbol
-        name="gear"
-        color={ICON_COLOR}
-      />
+      <View style={styles.rideTypeIcon}>
+        <IconSymbol 
+          name={rideType.icon as any} 
+          size={24} 
+          color={selectedRideType === rideType.id ? colors.background : colors.primary} 
+        />
+      </View>
+      <View style={styles.rideTypeInfo}>
+        <Text style={[
+          styles.rideTypeName,
+          selectedRideType === rideType.id && styles.selectedText
+        ]}>
+          {rideType.name}
+        </Text>
+        <Text style={[
+          styles.rideTypeDescription,
+          selectedRideType === rideType.id && styles.selectedTextSecondary
+        ]}>
+          {rideType.description}
+        </Text>
+      </View>
+      <Text style={[
+        styles.rideTypePrice,
+        selectedRideType === rideType.id && styles.selectedText
+      ]}>
+        {rideType.price}
+      </Text>
     </Pressable>
   );
 
@@ -89,93 +151,270 @@ export default function HomeScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Building the app...",
-          headerRight: renderHeaderRight,
-          headerLeft: renderHeaderLeft,
+          title: "Jamaica Ride",
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.primary,
+          },
+          headerTintColor: colors.background,
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push('/profile')}
+              style={styles.headerButton}
+            >
+              <IconSymbol name="person.circle" color={colors.background} size={24} />
+            </Pressable>
+          ),
         }}
       />
-      <View style={styles.container}>
-        <FlatList
-          data={modalDemos}
-          renderItem={renderModalDemo}
-          keyExtractor={(item) => item.route}
-          contentContainerStyle={styles.listContainer}
-          contentInsetAdjustmentBehavior="automatic"
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+      
+      <ScrollView style={commonStyles.wrapper} showsVerticalScrollIndicator={false}>
+        {/* Map Placeholder */}
+        <View style={styles.mapPlaceholder}>
+          <Text style={styles.mapPlaceholderText}>
+            🗺️ Map View
+          </Text>
+          <Text style={styles.mapNotice}>
+            Note: react-native-maps is not supported in Natively right now.
+            In a real app, this would show an interactive map with your location and nearby drivers.
+          </Text>
+        </View>
+
+        {/* Location Inputs */}
+        <View style={styles.locationContainer}>
+          <View style={styles.inputContainer}>
+            <IconSymbol name="location" color={colors.primary} size={20} />
+            <TextInput
+              style={styles.locationInput}
+              placeholder="Pickup location"
+              placeholderTextColor={colors.textSecondary}
+              value={pickupLocation}
+              onChangeText={setPickupLocation}
+            />
+          </View>
+          
+          <View style={styles.inputContainer}>
+            <IconSymbol name="location.fill" color={colors.accent} size={20} />
+            <TextInput
+              style={styles.locationInput}
+              placeholder="Where to?"
+              placeholderTextColor={colors.textSecondary}
+              value={destination}
+              onChangeText={setDestination}
+            />
+          </View>
+        </View>
+
+        {/* Ride Types */}
+        <View style={styles.rideTypesContainer}>
+          <Text style={styles.sectionTitle}>Choose your ride</Text>
+          {rideTypes.map(renderRideType)}
+        </View>
+
+        {/* Fare Estimate */}
+        {estimatedFare > 0 && (
+          <View style={styles.fareContainer}>
+            <Text style={styles.fareLabel}>Estimated Fare</Text>
+            <Text style={styles.fareAmount}>J${estimatedFare}</Text>
+          </View>
+        )}
+
+        {/* Request Ride Button */}
+        <View style={styles.buttonContainer}>
+          <Button
+            onPress={handleRequestRide}
+            loading={isRequestingRide}
+            disabled={!pickupLocation || !destination}
+            style={styles.requestButton}
+          >
+            {isRequestingRide ? 'Requesting Ride...' : 'Request Ride'}
+          </Button>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActionsContainer}>
+          <Pressable 
+            style={styles.quickAction}
+            onPress={() => router.push('/ride-history')}
+          >
+            <IconSymbol name="clock" color={colors.primary} size={24} />
+            <Text style={styles.quickActionText}>History</Text>
+          </Pressable>
+          
+          <Pressable 
+            style={styles.quickAction}
+            onPress={() => router.push('/saved-places')}
+          >
+            <IconSymbol name="heart" color={colors.primary} size={24} />
+            <Text style={styles.quickActionText}>Saved</Text>
+          </Pressable>
+          
+          <Pressable 
+            style={styles.quickAction}
+            onPress={() => router.push('/help')}
+          >
+            <IconSymbol name="questionmark.circle" color={colors.primary} size={24} />
+            <Text style={styles.quickActionText}>Help</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+  mapPlaceholder: {
+    height: height * 0.4,
+    backgroundColor: colors.backgroundAlt,
+    margin: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
-  headerSection: {
-    padding: 20,
-    paddingBottom: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-  },
-  headerTitle: {
+  mapPlaceholderText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 22,
+  mapNotice: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 16,
   },
-  listContainer: {
-    paddingVertical: 16,
+  locationContainer: {
     paddingHorizontal: 16,
+    marginBottom: 20,
   },
-  demoCard: {
-    backgroundColor: 'white',
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    elevation: 2,
+  },
+  locationInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: colors.text,
+  },
+  rideTypesContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  rideTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderWidth: 2,
+    borderColor: colors.border,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 2,
   },
-  demoIcon: {
+  selectedRideType: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  rideTypeIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: colors.backgroundAlt,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  demoContent: {
+  rideTypeInfo: {
     flex: 1,
   },
-  demoTitle: {
-    fontSize: 18,
+  rideTypeName: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 4,
   },
-  demoDescription: {
+  rideTypeDescription: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 18,
+    color: colors.textSecondary,
   },
-  emptyStateContainer: {
-    alignItems: "center",
-    gap: 8,
-    paddingTop: 100,
+  rideTypePrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
   },
-  headerButtonContainer: {
-    padding: 6, // Just enough padding around the 24px icon
+  selectedText: {
+    color: colors.background,
+  },
+  selectedTextSecondary: {
+    color: colors.backgroundAlt,
+  },
+  fareContainer: {
+    backgroundColor: colors.accent,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  fareLabel: {
+    fontSize: 14,
+    color: colors.black,
+    marginBottom: 4,
+  },
+  fareAmount: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.black,
+  },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  requestButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
+  quickAction: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  headerButton: {
+    padding: 8,
   },
 });

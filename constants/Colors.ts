@@ -1,3 +1,4 @@
+
 const tintColorLight = "#0a7ea4";
 const tintColorDark = "#fff";
 
@@ -20,22 +21,34 @@ export const appleRed = "#FF3B30";
 
 export const borderColor = "#A1A1AA80";
 export const appleGreen = "#34C759";
+
+// Jamaica themed colors
+export const jamaicaColors = {
+  green: "#009639", // Jamaica flag green
+  yellow: "#FFCD00", // Jamaica flag yellow
+  black: "#000000", // Jamaica flag black
+  lightGreen: "#00B84A",
+  darkGreen: "#007A2E",
+  gold: "#FFD700",
+  lightYellow: "#FFF3A0",
+};
+
 export const Colors = {
   light: {
     text: "#11181C",
     background: "#fff",
-    tint: tintColorLight,
+    tint: jamaicaColors.green,
     icon: "#687076",
     tabIconDefault: "#687076",
-    tabIconSelected: tintColorLight,
+    tabIconSelected: jamaicaColors.green,
   },
   dark: {
     text: "#ECEDEE",
     background: "#151718",
-    tint: tintColorDark,
+    tint: jamaicaColors.yellow,
     icon: "#9BA1A6",
     tabIconDefault: "#9BA1A6",
-    tabIconSelected: tintColorDark,
+    tabIconSelected: jamaicaColors.yellow,
   },
 };
 
